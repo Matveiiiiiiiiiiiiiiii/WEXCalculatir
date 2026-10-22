@@ -1,0 +1,6 @@
+{
+  "name": "Системный Калькулятор с решениями",
+  "description": "Полнофункциональный системный калькулятор в стиле Windows 11 и macOS с подробным пошаговым отображением всех решений, лентой истории, инженерным и программистским режимами.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
