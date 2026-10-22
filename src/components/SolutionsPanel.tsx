@@ -16,7 +16,8 @@ import {
   RotateCcw,
   Sparkles,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Mail
 } from 'lucide-react';
 import { Language, getTranslation } from '../utils/i18n';
 
@@ -31,6 +32,7 @@ interface SolutionsPanelProps {
   onClose: () => void;
   isDark: boolean;
   lang?: Language;
+  onShareViaGmail?: (rec: CalculationRecord) => void;
 }
 
 export const SolutionsPanel: React.FC<SolutionsPanelProps> = ({
@@ -44,6 +46,7 @@ export const SolutionsPanel: React.FC<SolutionsPanelProps> = ({
   onClose,
   isDark,
   lang = 'ru',
+  onShareViaGmail,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'standard' | 'scientific' | 'programmer'>('all');
@@ -582,6 +585,19 @@ export const SolutionsPanel: React.FC<SolutionsPanelProps> = ({
                       <RotateCcw className="w-3 h-3 text-amber-400" />
                       <span>{getTranslation('loadFormula', lang)}</span>
                     </button>
+
+                    {onShareViaGmail && (
+                      <button
+                        onClick={() => onShareViaGmail(rec)}
+                        className={`px-2 py-1 rounded font-medium flex items-center gap-1 transition-colors ${
+                          isDark ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' : 'bg-red-50 hover:bg-red-100 text-red-600'
+                        }`}
+                        title={getTranslation('gmailShare', lang)}
+                      >
+                        <Mail className="w-3 h-3" />
+                        <span>Gmail</span>
+                      </button>
+                    )}
 
                     {!rec.note && !isEditingNote && (
                       <button

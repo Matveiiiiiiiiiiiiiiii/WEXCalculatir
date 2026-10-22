@@ -1,6 +1,6 @@
 import React from 'react';
 import { CalculatorMode, AngleMode, WordSize } from '../types/calculator';
-import { Binary, FlaskConical, Calculator, Divide, ArrowLeftRight, Landmark } from 'lucide-react';
+import { Binary, FlaskConical, Calculator, Divide, ArrowLeftRight, Landmark, LineChart } from 'lucide-react';
 import { Language, getTranslation } from '../utils/i18n';
 
 interface ModeSelectorProps {
@@ -28,6 +28,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
     { id: 'standard', icon: <Calculator className="w-3.5 h-3.5" /> },
     { id: 'fractions', icon: <Divide className="w-3.5 h-3.5" /> },
     { id: 'scientific', icon: <FlaskConical className="w-3.5 h-3.5" /> },
+    { id: 'graphs', icon: <LineChart className="w-3.5 h-3.5" /> },
     { id: 'programmer', icon: <Binary className="w-3.5 h-3.5" /> },
     { id: 'converter', icon: <ArrowLeftRight className="w-3.5 h-3.5" /> },
     { id: 'finance', icon: <Landmark className="w-3.5 h-3.5" /> },

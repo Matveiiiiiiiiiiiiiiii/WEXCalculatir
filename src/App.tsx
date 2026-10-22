@@ -5,10 +5,12 @@ import {
   ProgrammerBase,
   WordSize,
   CalculationRecord,
+  CalculationStep,
   MemoryItem,
   AppSettings,
   AppTheme,
   AccentColor,
+  UserProfile,
 } from './types/calculator';
 import {
   formatResultNumber,
@@ -27,10 +29,14 @@ import { Keypad } from './components/Keypad';
 import { FractionsKeypad } from './components/FractionsKeypad';
 import { ConverterView } from './components/ConverterView';
 import { FinanceView } from './components/FinanceView';
+import { GraphingView } from './components/GraphingView';
 import { SolutionsPanel } from './components/SolutionsPanel';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { SettingsModal } from './components/SettingsModal';
 import { PhotoMathModal } from './components/PhotoMathModal';
+import { AccountModal } from './components/AccountModal';
+import { GmailSendConfirmModal } from './components/GmailSendConfirmModal';
+import { initAuth, mapFirebaseUser } from './utils/googleAuth';
 import { Language, getTranslation } from './utils/i18n';
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -257,6 +263,126 @@ export default function App() {
       // Safe fallback
     }
   }, [memoryList]);
+
+  // User Profile state (Firebase Auth with Gmail scopes)
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [showAccount, setShowAccount] = useState<boolean>(false);
+  const [gmailModalData, setGmailModalData] = useState<{
+    isOpen: boolean;
+    defaultRecipient?: string;
+    defaultSubject: string;
+    defaultBody: string;
+    defaultHtml?: string;
+  }>({
+    isOpen: false,
+    defaultRecipient: '',
+    defaultSubject: '',
+    defaultBody: '',
+    defaultHtml: '',
+  });
+
+  // Subscribe to Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (fbUser) => {
+        setUser(mapFirebaseUser(fbUser));
+      },
+      () => {
+        setUser(null);
+      }
+    );
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
+
+  const handleShareCalculationViaGmail = useCallback(
+    (rec: CalculationRecord) => {
+      const subject = `ВексКалькулятор: Решение ${rec.expression} = ${rec.result}`;
+      const stepsText = rec.steps
+        .map(
+          (s) =>
+            `Шаг ${s.stepNumber}: ${s.description}\n  ${s.subExpression} = ${s.subResult}\n  Итог: ${s.resultingExpression}`
+        )
+        .join('\n\n');
+
+      const body = `Здравствуйте!\n\nНаправляю подробный пошаговый расчет из ВексКалькулятора:\n\nВыражение: ${rec.expression}\nРезультат: ${rec.result}\n\nПошаговое решение:\n${stepsText}\n\n${rec.note ? `Заметка: ${rec.note}\n` : ''}\nДата: ${new Date(rec.timestamp).toLocaleString()}\nСоздано в ВексКалькуляторе.`;
+
+      const stepsHtml = rec.steps
+        .map(
+          (s) =>
+            `<div style="margin-bottom: 12px; padding: 10px; background: #f8fafc; border-radius: 8px; border-left: 3px solid #2563eb;">
+              <strong style="color: #1e293b;">Шаг ${s.stepNumber}:</strong> ${s.description}<br/>
+              <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold;">${s.subExpression} = ${s.subResult}</code>
+            </div>`
+        )
+        .join('');
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 24px; border: 1px solid #cbd5e1; border-radius: 14px;">
+          <h2 style="color: #2563eb; margin-top: 0;">ВексКалькулятор — Пошаговое решение</h2>
+          <div style="background: #eff6ff; padding: 16px; border-radius: 10px; margin-bottom: 18px;">
+            <div style="font-size: 14px; color: #475569;">Выражение:</div>
+            <div style="font-size: 18px; font-weight: bold; color: #1e293b; font-family: monospace;">${rec.expression}</div>
+            <div style="font-size: 14px; color: #475569; margin-top: 8px;">Результат:</div>
+            <div style="font-size: 24px; font-weight: bold; color: #16a34a; font-family: monospace;">${rec.result}</div>
+          </div>
+          <h3 style="color: #334155; font-size: 15px;">Шаги решения:</h3>
+          ${stepsHtml}
+          ${rec.note ? `<p style="margin-top: 14px; font-style: italic; color: #64748b;">Заметка: ${rec.note}</p>` : ''}
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin-top: 20px;" />
+          <p style="font-size: 11px; color: #94a3b8; margin-bottom: 0;">Отправлено с помощью Google Workspace Gmail API из ВексКалькулятора</p>
+        </div>
+      `;
+
+      setGmailModalData({
+        isOpen: true,
+        defaultRecipient: user?.email || '',
+        defaultSubject: subject,
+        defaultBody: body,
+        defaultHtml: html,
+      });
+    },
+    [user]
+  );
+
+  const handleShareGraphViaGmail = useCallback(
+    (subject: string, body: string, htmlBody?: string) => {
+      setGmailModalData({
+        isOpen: true,
+        defaultRecipient: user?.email || '',
+        defaultSubject: subject,
+        defaultBody: body,
+        defaultHtml: htmlBody,
+      });
+    },
+    [user]
+  );
+
+  const handleOpenGmailCompose = useCallback(
+    (type: 'calculation' | 'graph') => {
+      if (type === 'graph') {
+        setMode('graphs');
+        handleShareGraphViaGmail(
+          'ВексКалькулятор: Математический график',
+          'Делюсь математическим графиком функций из ВексКалькулятора.'
+        );
+      } else {
+        const topRec = records[0];
+        if (topRec) {
+          handleShareCalculationViaGmail(topRec);
+        } else {
+          setGmailModalData({
+            isOpen: true,
+            defaultRecipient: user?.email || '',
+            defaultSubject: 'ВексКалькулятор: Вычисления',
+            defaultBody: 'Здравствуйте!\n\nДелюсь математическими расчетами из ВексКалькулятора.',
+          });
+        }
+      }
+    },
+    [records, user, handleShareCalculationViaGmail, handleShareGraphViaGmail]
+  );
 
   // Sound feedback helper
   const triggerSound = useCallback(
@@ -915,6 +1041,10 @@ export default function App() {
           onOpenPhotoMath={() => setShowPhotoMath(true)}
           lang={lang}
           setLang={setLang}
+          user={user}
+          onOpenAccount={() => setShowAccount(true)}
+          activeMode={mode}
+          onSelectMode={setMode}
         />
 
         {/* Dual-Pane Layout: Calculator & Solutions Tape */}
@@ -938,7 +1068,13 @@ export default function App() {
             />
 
             {/* View Switching based on active mode */}
-            {mode === 'fractions' ? (
+            {mode === 'graphs' ? (
+              <GraphingView
+                isDark={isDark}
+                lang={lang}
+                onShareViaGmail={handleShareGraphViaGmail}
+              />
+            ) : mode === 'fractions' ? (
               <FractionsKeypad
                 onAddRecord={(rec) => setRecords((prev) => [rec, ...prev])}
                 triggerSound={triggerSound}
@@ -1024,6 +1160,7 @@ export default function App() {
                 onClose={() => setShowHistory(false)}
                 isDark={isDark}
                 lang={lang}
+                onShareViaGmail={handleShareCalculationViaGmail}
               />
             </div>
           )}
@@ -1059,6 +1196,29 @@ export default function App() {
         onSolveExpression={handlePhotoMathSolve}
         lang={lang}
         isDark={isDark}
+      />
+
+      {/* Google Account & Workspace Modal */}
+      <AccountModal
+        isOpen={showAccount}
+        onClose={() => setShowAccount(false)}
+        user={user}
+        onUserChange={setUser}
+        isDark={isDark}
+        lang={lang}
+        onOpenGmailCompose={handleOpenGmailCompose}
+      />
+
+      {/* Explicit Gmail Sending Confirmation Dialog (Mandatory User Consent) */}
+      <GmailSendConfirmModal
+        isOpen={gmailModalData.isOpen}
+        onClose={() => setGmailModalData((prev) => ({ ...prev, isOpen: false }))}
+        defaultRecipient={gmailModalData.defaultRecipient}
+        defaultSubject={gmailModalData.defaultSubject}
+        defaultBody={gmailModalData.defaultBody}
+        defaultHtml={gmailModalData.defaultHtml}
+        isDark={isDark}
+        lang={lang}
       />
     </div>
   );

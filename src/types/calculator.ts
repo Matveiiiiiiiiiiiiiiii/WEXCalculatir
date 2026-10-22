@@ -4,7 +4,24 @@ export type CalculatorMode =
   | 'programmer'
   | 'fractions'
   | 'converter'
-  | 'finance';
+  | 'finance'
+  | 'graphs';
+
+export interface GraphFunction {
+  id: string;
+  expression: string;
+  color: string;
+  visible: boolean;
+  showDerivative?: boolean;
+  label?: string;
+}
+
+export interface UserProfile {
+  uid: string;
+  displayName: string | null;
+  email: string | null;
+  photoURL: string | null;
+}
 
 export type AngleMode = 'DEG' | 'RAD';
 

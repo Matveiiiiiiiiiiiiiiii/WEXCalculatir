@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Language, LANGUAGES, getTranslation } from '../utils/i18n';
+import { UserProfile, CalculatorMode } from '../types/calculator';
 import {
   Calculator,
   Volume2,
@@ -14,7 +15,9 @@ import {
   Pin,
   Settings,
   Camera,
-  Globe
+  Globe,
+  LineChart,
+  User as UserIcon
 } from 'lucide-react';
 
 interface TitleBarProps {
@@ -36,6 +39,10 @@ interface TitleBarProps {
   onOpenPhotoMath: () => void;
   lang: Language;
   setLang: (l: Language) => void;
+  user: UserProfile | null;
+  onOpenAccount: () => void;
+  activeMode: CalculatorMode;
+  onSelectMode: (mode: CalculatorMode) => void;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -57,6 +64,10 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onOpenPhotoMath,
   lang,
   setLang,
+  user,
+  onOpenAccount,
+  activeMode,
+  onSelectMode,
 }) => {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const currentLang = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
@@ -67,7 +78,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         isDark
           ? 'bg-slate-900/80 border-slate-800 text-slate-200'
           : 'bg-slate-100/90 border-slate-200 text-slate-800'
-      } backdrop-blur-md relative`}
+      } backdrop-blur-md relative z-30`}
     >
       {/* Left side: Window Controls & Title */}
       <div className="flex items-center gap-2.5">
@@ -109,8 +120,69 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         </div>
       </div>
 
+      {/* Center: Quick Switcher between Calculator and Graphs */}
+      <div className="hidden sm:flex items-center p-0.5 rounded-lg border border-inherit/40 bg-slate-500/10">
+        <button
+          onClick={() => onSelectMode(activeMode === 'graphs' ? 'standard' : activeMode)}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+            activeMode !== 'graphs'
+              ? isDark
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-blue-600 shadow-xs'
+              : 'opacity-70 hover:opacity-100'
+          }`}
+          title="Режим калькулятора"
+        >
+          <Calculator className="w-3.5 h-3.5" />
+          <span>{getTranslation('standard', lang)}</span>
+        </button>
+        <button
+          onClick={() => onSelectMode('graphs')}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+            activeMode === 'graphs'
+              ? isDark
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-blue-600 shadow-xs'
+              : 'opacity-70 hover:opacity-100'
+          }`}
+          title="Режим построения графиков"
+        >
+          <LineChart className="w-3.5 h-3.5" />
+          <span>{getTranslation('graphs', lang)}</span>
+        </button>
+      </div>
+
       {/* Right side: App Actions & System Toggles */}
       <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        {/* Google Workspace / Account button */}
+        <button
+          onClick={onOpenAccount}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+            user
+              ? isDark
+                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30'
+                : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+              : isDark
+              ? 'hover:bg-slate-800 text-slate-300'
+              : 'hover:bg-slate-200 text-slate-700'
+          }`}
+          title={user ? `${user.displayName || user.email}` : getTranslation('account', lang)}
+          aria-label={getTranslation('account', lang)}
+        >
+          {user?.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt={user.displayName || 'User'}
+              className="w-4 h-4 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <UserIcon className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+          )}
+          <span className="hidden sm:inline font-semibold">
+            {user ? (user.displayName?.split(' ')[0] || 'User') : getTranslation('account', lang)}
+          </span>
+        </button>
+
         {/* Photo Math Scanner Button */}
         <button
           onClick={onOpenPhotoMath}
